@@ -1,1 +1,510 @@
-UPDATED_CONTENT_PLACEHOLDER
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>ไล่จับผี · Halloween</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Mali:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0c0a12;
+    --ghost: #f5f5f5;
+    --accent: #ff6b35;
+    --accent2: #a78bfa;
+    --text: #f0eef5;
+    --muted: #8b8799;
+    --theme: 'halloween';
+  }
+  [data-theme="night"] {
+    --bg: #05060a;
+    --accent: #7dd3fc;
+    --accent2: #c084fc;
+  }
+  [data-theme="pumpkin"] {
+    --bg: #1a0f0a;
+    --accent: #fb923c;
+    --accent2: #fbbf24;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Mali', system-ui, sans-serif;
+    overflow: hidden;
+    touch-action: none;
+  }
+  canvas {
+    display: block;
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 1;
+  }
+  .ui {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    display: flex;
+    flex-direction: column;
+    z-index: 10;
+  }
+  .hud {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 18px 22px;
+    font-size: 15px;
+    pointer-events: none;
+  }
+  .hud .left, .hud .right { display: flex; gap: 16px; align-items: center; }
+  .theme-btn {
+    pointer-events: auto;
+    background: transparent;
+    border: 1px solid var(--muted);
+    color: var(--muted);
+    padding: 4px 10px;
+    font-size: 12px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .screen {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(12,10,18,0.82);
+    pointer-events: auto;
+    text-align: center;
+    gap: 14px;
+    padding: 20px;
+  }
+  .screen.hidden { display: none; }
+  .cg-frame {
+    width: 160px;
+    height: 160px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, #2a2438, #0c0a12);
+    border: 2px solid var(--accent2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 8px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 0 40px rgba(167,139,250,0.25);
+  }
+  .cg-frame::before {
+    content: '👻';
+    font-size: 72px;
+    filter: drop-shadow(0 0 12px #fff);
+  }
+  h1 {
+    font-size: 46px;
+    font-weight: 500;
+    letter-spacing: -0.5px;
+    line-height: 1.1;
+  }
+  h1 .ghost { color: var(--accent); }
+  .sub {
+    font-size: 15px;
+    color: var(--muted);
+    margin-bottom: 12px;
+    max-width: 300px;
+    line-height: 1.5;
+  }
+  button.main {
+    background: transparent;
+    border: 1.5px solid var(--accent);
+    color: var(--accent);
+    padding: 12px 36px;
+    font-size: 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+    pointer-events: auto;
+    font-family: inherit;
+    font-weight: 500;
+  }
+  button.main:hover, button.main:active {
+    background: var(--accent);
+    color: #111;
+  }
+  .score-big {
+    font-size: 68px;
+    font-weight: 400;
+    margin: 4px 0;
+    color: var(--accent);
+  }
+  .best {
+    font-size: 14px;
+    color: var(--muted);
+  }
+  .hint {
+    position: absolute;
+    bottom: 28px;
+    left: 0; right: 0;
+    text-align: center;
+    font-size: 13px;
+    color: var(--muted);
+    pointer-events: none;
+  }
+  .types {
+    display: flex;
+    gap: 18px;
+    margin-top: 8px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .types span { display: flex; align-items: center; gap: 4px; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="ui">
+  <div class="hud">
+    <div class="left">
+      <span id="score">0</span>
+      <span style="opacity:.5">คะแนน</span>
+    </div>
+    <div class="right">
+      <button class="theme-btn" id="themeBtn">ธีม</button>
+      <span id="time">45</span>
+    </div>
+  </div>
+  <div id="start" class="screen">
+    <div class="cg-frame"></div>
+    <h1>ไล่<span class="ghost">จับผี</span></h1>
+    <div class="sub">คลิกหรือแตะผีที่ลอยผ่าน<br>จับให้ได้มากที่สุดใน 45 วินาที</div>
+    <div class="types">
+      <span><i class="dot" style="background:#fff"></i> ปกติ 10</span>
+      <span><i class="dot" style="background:#a5f3fc"></i> เร็ว 15</span>
+      <span><i class="dot" style="background:#f97316"></i> หายาก 30</span>
+    </div>
+    <button class="main" id="startBtn">เริ่มจับผี</button>
+  </div>
+  <div id="over" class="screen hidden">
+    <div class="cg-frame" style="border-color:var(--accent)"></div>
+    <div style="font-size:14px;letter-spacing:1px;opacity:0.6">จบเกม</div>
+    <div class="score-big" id="finalScore">0</div>
+    <div class="best" id="bestScore">สูงสุด: 0</div>
+    <button class="main" id="againBtn">เล่นอีกครั้ง</button>
+  </div>
+  <div class="hint" id="hint">คลิกเพื่อจับผี</div>
+</div>
+
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const scoreEl = document.getElementById('score');
+const timeEl = document.getElementById('time');
+const startScreen = document.getElementById('start');
+const overScreen = document.getElementById('over');
+const finalScoreEl = document.getElementById('finalScore');
+const bestScoreEl = document.getElementById('bestScore');
+const hint = document.getElementById('hint');
+const themeBtn = document.getElementById('themeBtn');
+
+let W, H, dpr;
+function resize() {
+  dpr = Math.min(window.devicePixelRatio || 1, 2);
+  W = window.innerWidth;
+  H = window.innerHeight;
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+window.addEventListener('resize', resize);
+resize();
+
+let ghosts = [];
+let particles = [];
+let score = 0;
+let timeLeft = 45;
+let running = false;
+let lastTime = 0;
+let spawnTimer = 0;
+let best = parseInt(localStorage.getItem('ghostCatchBest') || '0');
+let themeIndex = 0;
+const themes = ['halloween', 'night', 'pumpkin'];
+
+// Audio
+let audioCtx;
+function initAudio() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+}
+function playSound(freq, duration = 0.12, type = 'sine', gain = 0.07) {
+  try {
+    initAudio();
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    o.type = type;
+    o.frequency.value = freq;
+    g.gain.setValueAtTime(gain, audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start();
+    o.stop(audioCtx.currentTime + duration);
+  } catch(e) {}
+}
+
+function rand(min, max) { return min + Math.random() * (max - min); }
+
+const GHOST_TYPES = {
+  normal: { color: '#f8f8f8', points: 10, speed: 1, size: [20, 30], freq: 480 },
+  fast:   { color: '#a5f3fc', points: 15, speed: 1.7, size: [16, 24], freq: 620 },
+  rare:   { color: '#fb923c', points: 30, speed: 0.75, size: [26, 38], freq: 320, special: true }
+};
+
+class Ghost {
+  constructor(type = 'normal') {
+    this.type = type;
+    const t = GHOST_TYPES[type];
+    this.r = rand(t.size[0], t.size[1]);
+    this.x = rand(this.r + 30, W - this.r - 30);
+    this.y = rand(this.r + 50, H - this.r - 40);
+    this.baseSpeed = t.speed;
+    this.vx = rand(-0.5, 0.5) * this.baseSpeed;
+    this.vy = rand(-0.35, 0.35) * this.baseSpeed;
+    this.phase = Math.random() * Math.PI * 2;
+    this.alpha = 0;
+    this.caught = false;
+    this.color = t.color;
+    this.points = t.points;
+    this.freq = t.freq;
+    this.special = !!t.special;
+  }
+  update(dt) {
+    if (this.alpha < 1) this.alpha = Math.min(1, this.alpha + dt * 0.004);
+    this.phase += dt * 0.0025;
+    const wobble = this.special ? Math.sin(this.phase * 2) * 0.4 : Math.sin(this.phase) * 0.12;
+    this.x += this.vx * dt * 0.07;
+    this.y += this.vy * dt * 0.07 + wobble;
+    if (this.x < this.r + 15 || this.x > W - this.r - 15) this.vx *= -1;
+    if (this.y < this.r + 35 || this.y > H - this.r - 25) this.vy *= -1;
+  }
+  draw() {
+    if (this.alpha <= 0) return;
+    ctx.save();
+    ctx.globalAlpha = this.alpha * 0.92;
+    ctx.fillStyle = this.color;
+    const top = this.y - this.r * 0.55;
+    ctx.beginPath();
+    ctx.arc(this.x, top + this.r * 0.38, this.r * 0.82, Math.PI, 0, false);
+    const bottom = this.y + this.r * 0.48;
+    const steps = 7;
+    for (let i = 0; i <= steps; i++) {
+      const px = this.x - this.r + (i / steps) * this.r * 2;
+      const py = bottom + Math.sin(this.phase * 1.8 + i * 0.7) * (this.special ? 6 : 3.5);
+      ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    ctx.fill();
+
+    // eyes
+    ctx.globalAlpha = this.alpha;
+    ctx.fillStyle = '#111';
+    const eyeY = top + this.r * 0.22;
+    const eyeSize = this.r * 0.11;
+    ctx.beginPath();
+    ctx.arc(this.x - this.r * 0.26, eyeY, eyeSize, 0, Math.PI * 2);
+    ctx.arc(this.x + this.r * 0.26, eyeY, eyeSize, 0, Math.PI * 2);
+    ctx.fill();
+
+    // mouth - smile or surprised
+    ctx.strokeStyle = '#111';
+    ctx.lineWidth = Math.max(1.2, this.r * 0.06);
+    ctx.lineCap = 'round';
+    const mouthY = eyeY + this.r * 0.28;
+    if (this.special) {
+      // surprised O mouth
+      ctx.beginPath();
+      ctx.arc(this.x, mouthY, this.r * 0.12, 0, Math.PI * 2);
+      ctx.stroke();
+    } else {
+      // smile
+      ctx.beginPath();
+      ctx.arc(this.x, mouthY - this.r * 0.04, this.r * 0.22, 0.2, Math.PI - 0.2);
+      ctx.stroke();
+    }
+
+    if (this.special) {
+      ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.r + 4, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+  hit(mx, my) {
+    const dx = this.x - mx;
+    const dy = this.y - my;
+    return dx * dx + dy * dy < (this.r * 1.15) * (this.r * 1.15);
+  }
+}
+
+class Particle {
+  constructor(x, y, color) {
+    this.x = x; this.y = y;
+    this.vx = rand(-2.2, 2.2);
+    this.vy = rand(-3.2, -0.4);
+    this.life = 1;
+    this.r = rand(2, 5);
+    this.color = color || '#ff6b35';
+  }
+  update(dt) {
+    this.x += this.vx * dt * 0.06;
+    this.y += this.vy * dt * 0.06;
+    this.life -= dt * 0.0018;
+    this.r *= 0.985;
+  }
+  draw() {
+    ctx.globalAlpha = Math.max(0, this.life);
+    ctx.fillStyle = this.color;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+function spawn() {
+  if (ghosts.length >= 8) return;
+  const roll = Math.random();
+  let type = 'normal';
+  if (roll > 0.82) type = 'rare';
+  else if (roll > 0.55) type = 'fast';
+  ghosts.push(new Ghost(type));
+}
+
+function catchGhost(g, x, y) {
+  g.caught = true;
+  score += g.points;
+  scoreEl.textContent = score;
+  for (let i = 0; i < (g.special ? 18 : 12); i++) {
+    particles.push(new Particle(x, y, g.special ? '#fbbf24' : g.color));
+  }
+  // scream sound
+  playSound(g.freq * 0.7, 0.08, 'sawtooth', 0.05);
+  setTimeout(() => playSound(g.freq * 1.4, 0.18, 'triangle', 0.07), 40);
+  setTimeout(() => playSound(g.freq * 0.9, 0.12, 'sine', 0.04), 120);
+}
+
+function gameLoop(ts) {
+  if (!running) return;
+  const dt = Math.min(ts - lastTime, 48);
+  lastTime = ts;
+
+  ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim() || '#0c0a12';
+  ctx.fillRect(0, 0, W, H);
+
+  // subtle grid
+  ctx.strokeStyle = 'rgba(255,255,255,0.025)';
+  ctx.lineWidth = 1;
+  for (let x = 0; x < W; x += 48) {
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+  }
+  for (let y = 0; y < H; y += 48) {
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+  }
+
+  // moon (simple CG element)
+  ctx.fillStyle = 'rgba(255,255,255,0.04)';
+  ctx.beginPath();
+  ctx.arc(W * 0.82, H * 0.18, 36, 0, Math.PI * 2);
+  ctx.fill();
+
+  spawnTimer += dt;
+  if (spawnTimer > 780) {
+    spawn();
+    spawnTimer = 0;
+  }
+
+  ghosts = ghosts.filter(g => !g.caught);
+  ghosts.forEach(g => { g.update(dt); g.draw(); });
+
+  particles = particles.filter(p => p.life > 0);
+  particles.forEach(p => { p.update(dt); p.draw(); });
+
+  timeLeft -= dt / 1000;
+  if (timeLeft <= 0) {
+    timeLeft = 0;
+    endGame();
+    return;
+  }
+  timeEl.textContent = Math.ceil(timeLeft);
+  requestAnimationFrame(gameLoop);
+}
+
+function startGame() {
+  ghosts = [];
+  particles = [];
+  score = 0;
+  timeLeft = 45;
+  scoreEl.textContent = '0';
+  timeEl.textContent = '45';
+  running = true;
+  lastTime = performance.now();
+  spawnTimer = 0;
+  startScreen.classList.add('hidden');
+  overScreen.classList.add('hidden');
+  hint.style.opacity = '0.45';
+  canvas.style.pointerEvents = 'auto';
+  initAudio();
+  playSound(220, 0.15, 'sine', 0.04);
+  for (let i = 0; i < 3; i++) spawn();
+  requestAnimationFrame(gameLoop);
+}
+
+function endGame() {
+  running = false;
+  if (score > best) {
+    best = score;
+    localStorage.setItem('ghostCatchBest', best);
+  }
+  finalScoreEl.textContent = score;
+  bestScoreEl.textContent = 'สูงสุด: ' + best;
+  overScreen.classList.remove('hidden');
+  hint.style.opacity = '0';
+  canvas.style.pointerEvents = 'none';
+  playSound(180, 0.3, 'triangle', 0.05);
+}
+
+function pointerDown(e) {
+  if (!running) return;
+  const rect = canvas.getBoundingClientRect();
+  const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+  const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+  const x = clientX - rect.left;
+  const y = clientY - rect.top;
+  for (let i = ghosts.length - 1; i >= 0; i--) {
+    if (ghosts[i].hit(x, y)) {
+      catchGhost(ghosts[i], x, y);
+      break;
+    }
+  }
+}
+
+canvas.addEventListener('pointerdown', pointerDown);
+canvas.addEventListener('touchstart', e => { e.preventDefault(); pointerDown(e); }, { passive: false });
+
+document.getElementById('startBtn').addEventListener('click', startGame);
+document.getElementById('againBtn').addEventListener('click', startGame);
+themeBtn.addEventListener('click', () => {
+  themeIndex = (themeIndex + 1) % themes.length;
+  document.documentElement.setAttribute('data-theme', themes[themeIndex]);
+});
+
+bestScoreEl.textContent = 'สูงสุด: ' + best;
+</script>
+</body>
+</html>
